@@ -1,0 +1,63 @@
+[
+  {
+    "pkg": "ireader.freewebnovel.en",
+    "apk": "ireader-en-freewebnovel-v2.16.apk",
+    "name": "FreeWebNovel",
+    "id": 3970612267773145070,
+    "lang": "en",
+    "code": 16,
+    "version": "2.16",
+    "description": "",
+    "nsfw": false,
+    "sourceDir": "main"
+  },
+  {
+    "pkg": "ireader.ranobes.en",
+    "apk": "ireader-en-ranobes-v2.9.apk",
+    "name": "Ranobes",
+    "id": 7992304614005451099,
+    "lang": "en",
+    "code": 9,
+    "version": "2.9",
+    "description": "",
+    "nsfw": false,
+    "sourceDir": "main"
+  },
+  {
+    "pkg": "ireader.readnovelfull.en",
+    "apk": "ireader-en-readnovelfull-v2.1.apk",
+    "name": "ReadNovelFull",
+    "id": 2528364313208007455,
+    "lang": "en",
+    "code": 1,
+    "version": "2.1",
+    "description": "Read novels from ReadNovelFull",
+    "nsfw": true,
+    "sourceDir": "main",
+    "assetsDir": "en/readnovelfull/main/assets"
+  },
+  {
+    "pkg": "ireader.royalroad.en",
+    "apk": "ireader-en-royalroad-v2.2.apk",
+    "name": "RoyalRoad",
+    "id": 7901266723452589635,
+    "lang": "en",
+    "code": 2,
+    "version": "2.2",
+    "description": "",
+    "nsfw": false,
+    "sourceDir": "main"
+  },
+  {
+    "pkg": "ireader.scribblehub.en",
+    "apk": "ireader-en-scribblehub-v2.4.apk",
+    "name": "ScribbleHub",
+    "id": 1532879115917586894,
+    "lang": "en",
+    "code": 4,
+    "version": "2.4",
+    "description": "",
+    "nsfw": false,
+    "sourceDir": "main"
+  }
+]
