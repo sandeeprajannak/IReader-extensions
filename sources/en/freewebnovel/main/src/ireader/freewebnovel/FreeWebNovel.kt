@@ -30,6 +30,7 @@ import ireader.core.source.model.Listing
 import ireader.core.source.model.MangaInfo
 import ireader.core.source.model.MangasPageInfo
 import ireader.core.util.DefaultDispatcher
+import io.ktor.client.statement.HttpResponse
 import io.ktor.client.statement.bodyAsText
 import kotlinx.coroutines.withContext
 import kotlinx.serialization.json.Json
@@ -102,31 +103,47 @@ abstract class FreeWebNovel(deps: Dependencies) : ParsedHttpSource(deps) {
         }
     }
 
+    /**
+     * freewebnovel.com serves error pages (e.g. 429 rate-limit) with HTTP 200-shaped markup that
+     * silently parses as zero results, which the app then reports as a permanently "broken" source.
+     * Fail loudly instead so transient network/rate-limit errors are distinguishable from real
+     * parsing breakage.
+     */
+    private fun checkStatus(response: HttpResponse) {
+        if (!response.status.value.let { it in 200..299 }) {
+            throw IllegalStateException("HTTP ${response.status}")
+        }
+    }
+
     private suspend fun getLatest(page: Int): MangasPageInfo {
         val resp = client.get(requestBuilder("$baseUrl/sort/latest-novel/$page/"))
+        checkStatus(resp)
         return bookListParse(resp.asJsoup(), "div.ul-list1 div.li-row", "div.ul-list1") { latestFromElement(it) }
     }
 
     private suspend fun getPopular(): MangasPageInfo {
         val resp = client.get(requestBuilder("$baseUrl/sort/most-popular"))
+        checkStatus(resp)
         return bookListParse(resp.asJsoup(), "div.ul-list1 div.li-row", null) { latestFromElement(it) }
     }
 
 
     private suspend fun getSearch(query: String): MangasPageInfo {
-        val resp = client.submitForm(
+        val response = client.submitForm(
             url = "https://freewebnovel.com/search",
             formParameters = Parameters.build {
                 append("searchkey", query)
             }
         ) {
             headersBuilder()
-        }.asJsoup()
-        return bookListParse(resp, "div.ul-list1 div.li-row", null) { searchFromElement(it) }
+        }
+        checkStatus(response)
+        return bookListParse(response.asJsoup(), "div.ul-list1 div.li-row", null) { searchFromElement(it) }
     }
 
     private suspend fun getNewNovel(page: Int): MangasPageInfo {
         val resp = client.get(requestBuilder("$baseUrl/sort/latest-release/$page/"))
+        checkStatus(resp)
         return bookListParse(resp.asJsoup(), "div.ul-list1 div.li-row", "div.ul-list1") { latestFromElement(it) }
     }
 
@@ -178,6 +195,7 @@ abstract class FreeWebNovel(deps: Dependencies) : ParsedHttpSource(deps) {
             var totalPage = 1
             do {
                 val response = client.get("$baseUrl?ajax=chapters&page=$page&pageSize=200")
+                checkStatus(response)
                 val json = Json.parseToJsonElement(response.bodyAsText()).jsonObject
                 totalPage = json["totalPage"]?.jsonPrimitive?.int ?: 1
                 val html = json["html"]?.jsonPrimitive?.content ?: ""
