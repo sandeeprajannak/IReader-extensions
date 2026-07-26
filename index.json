@@ -1,12 +1,12 @@
 [
   {
     "pkg": "ireader.freewebnovel.en",
-    "apk": "ireader-en-freewebnovel-v2.16.apk",
+    "apk": "ireader-en-freewebnovel-v2.17.apk",
     "name": "FreeWebNovel",
     "id": 3970612267773145070,
     "lang": "en",
-    "code": 16,
-    "version": "2.16",
+    "code": 17,
+    "version": "2.17",
     "description": "",
     "nsfw": false,
     "sourceDir": "main"

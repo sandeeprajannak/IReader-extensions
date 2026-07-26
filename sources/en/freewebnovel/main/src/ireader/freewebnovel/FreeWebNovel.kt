@@ -108,7 +108,7 @@ abstract class FreeWebNovel(deps: Dependencies) : ParsedHttpSource(deps) {
     }
 
     private suspend fun getPopular(): MangasPageInfo {
-        val resp = client.get(requestBuilder("$baseUrl/most-popular/"))
+        val resp = client.get(requestBuilder("$baseUrl/sort/most-popular"))
         return bookListParse(resp.asJsoup(), "div.ul-list1 div.li-row", null) { latestFromElement(it) }
     }
 
@@ -126,7 +126,7 @@ abstract class FreeWebNovel(deps: Dependencies) : ParsedHttpSource(deps) {
     }
 
     private suspend fun getNewNovel(page: Int): MangasPageInfo {
-        val resp = client.get(requestBuilder("$baseUrl/sort/latest-novels/$page/"))
+        val resp = client.get(requestBuilder("$baseUrl/sort/latest-release/$page/"))
         return bookListParse(resp.asJsoup(), "div.ul-list1 div.li-row", "div.ul-list1") { latestFromElement(it) }
     }
 
