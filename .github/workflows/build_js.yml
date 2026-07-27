@@ -81,9 +81,10 @@ jobs:
           retention-days: 7
 
       - name: Checkout repo branch
+        if: github.event_name == 'push' && github.repository == 'IReaderorg/IReader-extensions'
         uses: actions/checkout@v4
         with:
-          ref: repov2
+          ref: repo
           path: repo
 
       - name: Deploy JS to repo

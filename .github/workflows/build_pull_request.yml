@@ -142,10 +142,10 @@ jobs:
             ${{ secrets.KEY_STORE_PASSWORD }} \
             ${{ secrets.KEY_PASSWORD }}
       - name: Checkout repo branch
+        if: github.event_name == 'push' && github.repository == 'IReaderorg/IReader-extensions'
         uses: actions/checkout@v4
         with:
-          # Using repov2 branch for KMP migration - old repo branch preserved for legacy users
-          ref: repov2
+          ref: repo
           path: repo
 
       - name: Deploy repo

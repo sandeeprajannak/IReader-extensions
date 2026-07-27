@@ -1,8 +1,8 @@
 #!/bin/bash
 set -e
 
-# Sync built APKs from master/repo/ to repov2 branch
-# Note: The workflow checks out repov2 branch into 'repo' folder
+# Sync built APKs from master/repo/ to repo branch
+# Note: The workflow checks out repo branch into 'repo' folder
 # and master branch into 'master' folder
 # Exclude js/ folder to preserve JS sources deployed by build_js.yml workflow
 rsync -a --delete --exclude .git --exclude .gitignore --exclude js/ ../master/repo/ .
