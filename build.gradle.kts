@@ -21,6 +21,22 @@ tasks.register("delete", Delete::class) {
 }
 tasks.create<RepoTask>("repo")
 
+// Regenerates the jar sideload artifact for a single source's already-built release APK.
+// Used by scripts/publish_source.py so a single-source fix doesn't require running the
+// full multi-module `repo` task (which rebuilds and re-indexes every extension).
+// Usage: ./gradlew regenerateSourceJar -PsourceApk=<path> -PsourceJar=<path>
+tasks.register("regenerateSourceJar") {
+  doLast {
+    val apkPath = project.findProperty("sourceApk") as String?
+        ?: error("regenerateSourceJar requires -PsourceApk=<path>")
+    val jarPath = project.findProperty("sourceJar") as String?
+        ?: error("regenerateSourceJar requires -PsourceJar=<path>")
+    val apk = file(apkPath)
+    val jar = file(jarPath)
+    RepoTask.dex2jar(apk, jar, apk.name)
+  }
+}
+
 // Source ID management tasks
 registerSourceIdTasks()
 

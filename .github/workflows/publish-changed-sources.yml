@@ -1,0 +1,74 @@
+name: Publish changed sources
+
+# Lightweight alternative to build_push.yml's full-repo rebuild: for single-source fixes,
+# rebuild and republish only the source(s) that actually changed, updating index.json/
+# index.min.json + apk/jar/icon in place directly on master (where this fork serves its
+# catalog from). Adding a brand-new source still needs a one-off `./gradlew repo` run.
+on:
+  push:
+    branches:
+      - master
+    paths:
+      - 'sources/**'
+
+permissions:
+  contents: write
+
+concurrency:
+  group: publish-changed-sources
+  cancel-in-progress: false
+
+jobs:
+  publish:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 2
+
+      - name: Set up JDK
+        uses: actions/setup-java@v4
+        with:
+          java-version: 21
+          distribution: adopt
+
+      - name: Setup Gradle
+        uses: gradle/actions/setup-gradle@v4
+
+      - name: Detect changed source modules
+        id: changed
+        run: |
+          MODULES=$(git diff --name-only "${{ github.event.before }}" "${{ github.sha }}" -- 'sources/*/*/**' \
+            | grep -v '^sources/multisrc/' \
+            | awk -F/ '{print $2"/"$3}' \
+            | sort -u)
+          echo "Changed modules:"
+          echo "$MODULES"
+          {
+            echo "modules<<EOF"
+            echo "$MODULES"
+            echo "EOF"
+          } >> "$GITHUB_OUTPUT"
+
+      - name: Publish each changed source
+        if: steps.changed.outputs.modules != ''
+        run: |
+          while IFS= read -r module; do
+            [ -z "$module" ] && continue
+            lang="${module%%/*}"
+            name="${module##*/}"
+            python3 scripts/publish_source.py "$lang" "$name"
+          done <<< "${{ steps.changed.outputs.modules }}"
+
+      - name: Commit and push updated artifacts
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "github-actions[bot]@users.noreply.github.com"
+          git add -f apk/ jar/ icon/ index.json index.min.json
+          if ! git diff --cached --quiet; then
+            git commit -m "chore: publish updated source artifacts"
+            git push
+          else
+            echo "No artifact changes to publish"
+          fi

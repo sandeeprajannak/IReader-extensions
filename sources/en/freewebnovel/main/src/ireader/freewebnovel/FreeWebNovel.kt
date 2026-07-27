@@ -32,6 +32,9 @@ import ireader.core.source.model.MangasPageInfo
 import ireader.core.util.DefaultDispatcher
 import io.ktor.client.statement.HttpResponse
 import io.ktor.client.statement.bodyAsText
+import kotlinx.coroutines.delay
+import kotlinx.coroutines.sync.Mutex
+import kotlinx.coroutines.sync.withLock
 import kotlinx.coroutines.withContext
 import kotlinx.serialization.json.Json
 import kotlinx.serialization.json.jsonObject
@@ -115,13 +118,31 @@ abstract class FreeWebNovel(deps: Dependencies) : ParsedHttpSource(deps) {
         }
     }
 
+    // freewebnovel.com starts returning HTTP 429 under bursty traffic (e.g. several books opened
+    // back-to-back, each paginating its full chapter list). Throttle all requests from this source
+    // instance to ~2/sec regardless of how many concurrent callers are fetching.
+    private val throttleMutex = Mutex()
+    private var lastRequestAtMs = 0L
+    private val minRequestIntervalMs = 500L
+
+    private suspend fun throttle() {
+        throttleMutex.withLock {
+            val now = System.currentTimeMillis()
+            val wait = minRequestIntervalMs - (now - lastRequestAtMs)
+            if (wait > 0) delay(wait)
+            lastRequestAtMs = System.currentTimeMillis()
+        }
+    }
+
     private suspend fun getLatest(page: Int): MangasPageInfo {
+        throttle()
         val resp = client.get(requestBuilder("$baseUrl/sort/latest-novel/$page/"))
         checkStatus(resp)
         return bookListParse(resp.asJsoup(), "div.ul-list1 div.li-row", "div.ul-list1") { latestFromElement(it) }
     }
 
     private suspend fun getPopular(): MangasPageInfo {
+        throttle()
         val resp = client.get(requestBuilder("$baseUrl/sort/most-popular"))
         checkStatus(resp)
         return bookListParse(resp.asJsoup(), "div.ul-list1 div.li-row", null) { latestFromElement(it) }
@@ -129,6 +150,7 @@ abstract class FreeWebNovel(deps: Dependencies) : ParsedHttpSource(deps) {
 
 
     private suspend fun getSearch(query: String): MangasPageInfo {
+        throttle()
         val response = client.submitForm(
             url = "https://freewebnovel.com/search",
             formParameters = Parameters.build {
@@ -142,6 +164,7 @@ abstract class FreeWebNovel(deps: Dependencies) : ParsedHttpSource(deps) {
     }
 
     private suspend fun getNewNovel(page: Int): MangasPageInfo {
+        throttle()
         val resp = client.get(requestBuilder("$baseUrl/sort/latest-release/$page/"))
         checkStatus(resp)
         return bookListParse(resp.asJsoup(), "div.ul-list1 div.li-row", "div.ul-list1") { latestFromElement(it) }
@@ -194,6 +217,7 @@ abstract class FreeWebNovel(deps: Dependencies) : ParsedHttpSource(deps) {
             var page = 1
             var totalPage = 1
             do {
+                throttle()
                 val response = client.get("$baseUrl?ajax=chapters&page=$page&pageSize=200")
                 checkStatus(response)
                 val json = Json.parseToJsonElement(response.bodyAsText()).jsonObject
