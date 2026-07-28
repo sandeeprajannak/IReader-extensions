@@ -103,6 +103,21 @@ abstract class RoyalRoad(private val deps: Dependencies) : SourceFactory(
             authorBookSelector = "h4.font-white",
             categorySelector = ".margin-bottom-10 span a.label",
             descriptionSelector = ".description p",
+            // Selects the type badge ("Original"/"Fan Fiction") plus the status badge
+            // (e.g. "ONGOING") since both share the same classes with no distinguishing
+            // selector - onStatus below just looks for a known keyword anywhere in the
+            // joined text rather than relying on this matching only the status badge.
+            statusSelector = ".margin-bottom-10 span.label.bg-blue-hoki",
+            onStatus = { statusText ->
+                val normalized = statusText.lowercase()
+                when {
+                    normalized.contains("hiatus") -> MangaInfo.ON_HIATUS
+                    normalized.contains("dropped") || normalized.contains("cancelled") -> MangaInfo.CANCELLED
+                    normalized.contains("completed") -> MangaInfo.COMPLETED
+                    normalized.contains("ongoing") -> MangaInfo.ONGOING
+                    else -> MangaInfo.UNKNOWN
+                }
+            },
         )
 
     override val chapterFetcher: Chapters

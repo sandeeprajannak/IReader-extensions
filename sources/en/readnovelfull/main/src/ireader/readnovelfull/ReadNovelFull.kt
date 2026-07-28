@@ -2,6 +2,7 @@ package ireader.readnovelfull
 
 import io.ktor.client.request.*
 import io.ktor.client.statement.*
+import ireader.core.http.DEFAULT_USER_AGENT
 import ireader.core.log.Log
 import ireader.core.source.Dependencies
 import ireader.core.source.SourceFactory
@@ -176,10 +177,18 @@ abstract class ReadNovelFull(private val deps: Dependencies) : SourceFactory(dep
 
         // Use browser for detail page (JS-heavy)
         val html = try {
+            // Every parameter is passed explicitly (even ones matching the interface's
+            // defaults) so Kotlin calls fetch() directly via invokeinterface instead of
+            // routing through the fetch$default synthetic dispatcher - the desktop app's
+            // dex2jar-based APK loader mis-converts DEX calls to that dispatcher (an
+            // interface-owned static method) into a plain Methodref, which throws
+            // IncompatibleClassChangeError at runtime.
             val browserResult = deps.httpClients.browser.fetch(
                 url = manga.key,
                 selector = "h3.title",
-                timeout = 30000
+                headers = emptyMap(),
+                timeout = 30000,
+                userAgent = DEFAULT_USER_AGENT
             )
             if (browserResult.isSuccess && browserResult.responseBody.isNotBlank()) {
                 browserResult.responseBody
@@ -261,10 +270,13 @@ abstract class ReadNovelFull(private val deps: Dependencies) : SourceFactory(dep
         // Use browser for chapter content (JS-heavy)
         return try {
             val html = try {
+                // See getMangaDetails() for why every parameter is passed explicitly here.
                 val browserResult = deps.httpClients.browser.fetch(
                     url = chapter.key,
                     selector = "#chr-content, .chr-c",
-                    timeout = 30000
+                    headers = emptyMap(),
+                    timeout = 30000,
+                    userAgent = DEFAULT_USER_AGENT
                 )
                 if (browserResult.isSuccess && browserResult.responseBody.isNotBlank()) {
                     browserResult.responseBody

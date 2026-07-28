@@ -37,7 +37,7 @@ abstract class Ranobes(private val deps: Dependencies) : ParsedHttpSource(deps) 
 
     override val id: Long
         get() = 13
-    override val baseUrl = "https://ranobes.top"
+    override val baseUrl = "https://ranobes.net"
 
     override val lang = "en"
 
@@ -316,7 +316,7 @@ abstract class Ranobes(private val deps: Dependencies) : ParsedHttpSource(deps) 
         var currentPage = 1
         var res = ""
         val html =
-            client.get(requestBuilder("https://ranobes.net/chapters/${bookId}/page/1/"))
+            client.get(requestBuilder("$baseUrl/chapters/${bookId}/page/1/"))
         res = html.asJsoup().html().substringAfter("<script>window.__DATA__ = ")
             .substringBefore("</script>")
         Log.error { res }
