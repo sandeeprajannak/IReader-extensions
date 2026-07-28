@@ -6,10 +6,7 @@ import java.io.File
 open class DeployTask : DefaultTask() {
 
 init {
-    val deployTask = this
-    val buildTask = project.tasks.findByName("assembleDebug")
-    deployTask.dependsOn(buildTask)
-
+    project.tasks.findByName("assembleDebug")?.let { dependsOn(it) }
 }
     @TaskAction
     fun deploy() {
@@ -55,7 +52,7 @@ enum class OperatingSystem {
 
 private val currentOperatingSystem: OperatingSystem
     get() {
-        val operSys = java.lang.System.getProperty("os.name").toLowerCase()
+        val operSys = java.lang.System.getProperty("os.name").lowercase()
         return if (operSys.contains("win")) {
             OperatingSystem.Windows
         } else if (operSys.contains("nix") || operSys.contains("nux") ||

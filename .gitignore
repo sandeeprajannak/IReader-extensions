@@ -19,6 +19,12 @@ release/
 .gradle/
 build/
 */build/
+
+# Empty container directories Gradle 9 requires to exist for implicit
+# intermediate project paths (see settings.gradle.kts ensureParentProjectDirsExist)
+/extensions/individual/
+/extensions/multisrc/
+/extensions/v5/
 # Local configuration file (sdk path, etc)
 local.properties
 

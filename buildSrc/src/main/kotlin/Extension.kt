@@ -76,7 +76,7 @@ private fun getFlavorName(sourceDir: String, lang: String): String {
 }
 
 private fun generateSourceId(name: String, lang: String, versionId: Int = 1): Long {
-    val key = "${name.toLowerCase()}/$lang/$versionId"
+    val key = "${name.lowercase()}/$lang/$versionId"
     val bytes = MessageDigest.getInstance("MD5").digest(key.toByteArray())
     return (0..7).map { bytes[it].toLong() and 0xff shl 8 * (7 - it) }
         .reduce(Long::or) and Long.MAX_VALUE
@@ -84,5 +84,5 @@ private fun generateSourceId(name: String, lang: String, versionId: Int = 1): Lo
 
 private fun generateApplicationId(name: String, lang: String, sourceDir: String): String {
     val pkgName = if (sourceDir == "main") name else sourceDir
-    return "ireader.$pkgName.$lang".toLowerCase().replace(packageRegex, ".")
+    return "ireader.$pkgName.$lang".lowercase().replace(packageRegex, ".")
 }

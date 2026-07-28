@@ -2,9 +2,9 @@
 ireader = "1.5.1"
 ktor = "3.3.2"
 ktlint = "0.45.1"
-kotlin = "2.2.21"
-serialization = "1.9.0"
-ksp = "2.3.2"
+kotlin = "2.3.21"
+serialization = "1.11.0"
+ksp = "2.3.10"
 serializationkotlinVersion = "1.7.10"
 junitAndroidExtVersion = "1.1.4-alpha03"
 dex2jar = "2.4.33"
@@ -13,8 +13,8 @@ kotlinx-datetime = "0.7.1"
 
 [libraries]
 # Android/Gradle build tools
-android-sdklib = "com.android.tools:sdklib:31.13.1"
-android-gradle = "com.android.tools.build:gradle:8.13.1"
+android-sdklib = "com.android.tools:sdklib:32.3.1"
+android-gradle = "com.android.tools.build:gradle:9.3.1"
 
 # Ktor (KMP HTTP client)
 ktor-core = { module = "io.ktor:ktor-client-core", version.ref = "ktor" }

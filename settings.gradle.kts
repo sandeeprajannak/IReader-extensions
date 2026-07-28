@@ -23,6 +23,7 @@ if (System.getenv("CI") == null || System.getenv("CI_MODULE_GEN") == "true") {
                 if (File(subDir, "build.gradle.kts").exists()) {
                     val name = ":extensions:individual:${dir.name}:${subDir.name}"
                     include(name)
+                    ensureParentProjectDirsExist(name)
                     project(name).projectDir = File("sources/${dir.name}/${subDir.name}")
                 }
             }
@@ -33,6 +34,7 @@ if (System.getenv("CI") == null || System.getenv("CI_MODULE_GEN") == "true") {
         if (File(dir, "build.gradle.kts").exists()) {
             val dirName = ":extensions:multisrc:${dir.name}"
             include(dirName)
+            ensureParentProjectDirsExist(dirName)
             project(dirName).projectDir =
                 File("sources/multisrc/${dir.name}")
         }
@@ -45,6 +47,7 @@ if (System.getenv("CI") == null || System.getenv("CI_MODULE_GEN") == "true") {
                 if (File(subDir, "build.gradle.kts").exists()) {
                     val name = ":extensions:v5:${dir.name}:${subDir.name}"
                     include(name)
+                    ensureParentProjectDirsExist(name)
                     project(name).projectDir = File("sources-v5-batch/${dir.name}/${subDir.name}")
                 }
             }
@@ -59,6 +62,7 @@ if (System.getenv("CI") == null || System.getenv("CI_MODULE_GEN") == "true") {
             if (File(dir, "build.gradle.kts").exists()) {
                 val name = ":extensions:individual:${dir.parentFile.name}:${dir.name}"
                 include(name)
+                ensureParentProjectDirsExist(name)
                 project(name).projectDir = dir
             }
         }
@@ -99,6 +103,22 @@ dependencyResolutionManagement {
 }
 inline fun File.eachDir(block: (File) -> Unit) {
     listFiles()?.filter { it.isDirectory }?.forEach { block(it) }
+}
+
+// Gradle 9 enforces that every included project (including the implicit
+// intermediate/container projects Gradle auto-creates for a nested path like
+// ":extensions:multisrc:madara", e.g. ":extensions" and ":extensions:multisrc")
+// has an existing, writable directory. These container projects have no
+// build.gradle.kts of their own and are never part of the task graph, so an
+// empty directory is all they need. See:
+// https://docs.gradle.org/current/userguide/multi_project_builds.html#include_existing_projects_only
+fun ensureParentProjectDirsExist(path: String) {
+    val segments = path.trim(':').split(":")
+    var current = ""
+    for (i in 0 until segments.size - 1) {
+        current += ":" + segments[i]
+        project(current).projectDir.mkdirs()
+    }
 }
 
 fun File.getChunk(chunk: Int, chunkSize: Int, block: (File) -> Unit) {

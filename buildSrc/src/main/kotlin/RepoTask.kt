@@ -13,6 +13,7 @@ import org.gradle.api.DefaultTask
 import org.gradle.api.GradleException
 import org.gradle.api.file.DuplicatesStrategy
 import org.gradle.api.tasks.TaskAction
+import org.gradle.process.ExecOperations
 import org.objectweb.asm.ClassReader
 import org.objectweb.asm.ClassVisitor
 import org.objectweb.asm.ClassWriter
@@ -24,6 +25,7 @@ import java.nio.file.FileSystems
 import java.nio.file.Files
 import java.nio.file.StandardOpenOption
 import java.util.zip.ZipFile
+import javax.inject.Inject
 
 /*
     Copyright (C) 2018 The Tachiyomi Open Source Project
@@ -34,7 +36,9 @@ import java.util.zip.ZipFile
  */
 
 @OptIn(ExperimentalSerializationApi::class)
-open class RepoTask : DefaultTask() {
+open class RepoTask @Inject constructor(
+    private val execOperations: ExecOperations,
+) : DefaultTask() {
 
     private val aapt2 by lazy { getAapt2Path() }
 
@@ -169,7 +173,7 @@ open class RepoTask : DefaultTask() {
     private fun parseBadging(apkFile: File): Badging {
 
         val lines = ByteArrayOutputStream().use { outStream ->
-            project.exec {
+            execOperations.exec {
                 commandLine(
                     aapt2,
                     "dump",
@@ -182,7 +186,7 @@ open class RepoTask : DefaultTask() {
             outStream.toString().lines()
         }
         val appResources = ByteArrayOutputStream().use { outStream ->
-            project.exec {
+            execOperations.exec {
                 commandLine(
                     aapt2,
                     "dump",

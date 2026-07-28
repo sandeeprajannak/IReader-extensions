@@ -1,7 +1,4 @@
-import com.android.build.gradle.internal.api.ApplicationVariantImpl
-import com.android.build.gradle.internal.api.BaseVariantImpl
-import com.android.build.gradle.internal.api.BaseVariantOutputImpl
-import com.android.builder.model.ProductFlavor
+import com.android.build.api.artifact.SingleArtifact
 import java.io.File
 
 /**
@@ -15,7 +12,6 @@ import java.io.File
 
 plugins {
     id("com.android.application")
-    kotlin("android")
     kotlin("plugin.serialization")
     id("com.google.devtools.ksp")
 }
@@ -34,7 +30,7 @@ android {
     sourceSets {
         named("main") {
             manifest.srcFile("$rootDir/extensions/AndroidManifest.xml")
-            java.srcDirs("main/src")
+            kotlin.srcDirs("main/src")
             // Include minimal icon from extensions/res (67 bytes)
             res.srcDirs("main/res", "$rootDir/extensions/res")
             resources.setSrcDirs(emptyList<Any>())
@@ -42,7 +38,7 @@ android {
         extensionList.forEach { extension ->
             val sourceDir = extension.sourceDir
             create(extension.flavor) {
-                java.srcDirs("${sourceDir}/src")
+                kotlin.srcDirs("${sourceDir}/src")
                 if (!extension.icon.isAssetType()) {
                     res.srcDirs("${sourceDir}/res")
                 }
@@ -95,16 +91,6 @@ android {
             languageVersion.set(JavaLanguageVersion.of(21))
         }
     }
-    applicationVariants.all {
-        this as ApplicationVariantImpl
-        val extension = currentExtension() ?: return@all
-        outputs.all {
-            this as BaseVariantOutputImpl
-            val nameLower = extension.name.lowercase()
-            outputFileName = "ireader-${extension.lang}-${nameLower}-v${extension.versionName}.apk"
-            processManifestForExtension(extension)
-        }
-    }
     dependenciesInfo {
         includeInApk = false
     }
@@ -121,6 +107,37 @@ android {
         buildTypes.all {
             signingConfig = signingConfigs.getByName("release")
         }
+    }
+}
+
+// Per-flavor output naming and manifest post-processing (package name, source.class
+// metadata, deep links) via the Variant API's merged-manifest transform.
+androidComponents {
+    onVariants { variant ->
+        val extension = extensionList.firstOrNull { it.flavor == variant.flavorName } ?: return@onVariants
+
+        variant.outputs.forEach { output ->
+            output.outputFileName.set(
+                "ireader-${extension.lang}-${extension.name.lowercase()}-v${extension.versionName}.apk"
+            )
+        }
+
+        val manifestTask = tasks.register<ExtensionManifestTask>(
+            "process${variant.name.replaceFirstChar { it.uppercase() }}ExtensionManifest"
+        ) {
+            applicationId.set(extension.applicationId)
+            deepLinkSchemes.set(extension.deepLinks.map { it.scheme })
+            deepLinkHosts.set(extension.deepLinks.map { it.host })
+            deepLinkPathPatterns.set(extension.deepLinks.map { it.pathPattern })
+            deepLinkPaths.set(extension.deepLinks.map { it.path })
+        }
+
+        variant.artifacts.use(manifestTask)
+            .wiredWithFiles(
+                ExtensionManifestTask::mergedManifest,
+                ExtensionManifestTask::updatedManifest
+            )
+            .toTransform(SingleArtifact.MERGED_MANIFEST)
     }
 }
 
@@ -179,9 +196,9 @@ tasks.register<Jar>("extensionJar") {
     archiveBaseName.set("${project.name}-extensions")
     archiveVersion.set("1.0.0")
 
-    from(android.sourceSets.getByName("main").java.srcDirs)
+    from(android.sourceSets.getByName("main").kotlin.directories)
     extensionList.forEach { extension ->
-        from(android.sourceSets.getByName(extension.flavor).java.srcDirs)
+        from(android.sourceSets.getByName(extension.flavor).kotlin.directories)
     }
 
     manifest {
@@ -278,11 +295,6 @@ ksp {
         arg("${prefix}_has_deeplinks", extension.deepLinks.isNotEmpty().toString())
         arg("${prefix}_enable_js", extension.enableJs.toString())
     }
-}
-
-fun BaseVariantImpl.currentExtension(): Extension? {
-    val flavor = (productFlavors as List<ProductFlavor>).first()
-    return extensionList.firstOrNull { it.flavor == flavor.name }
 }
 
 
