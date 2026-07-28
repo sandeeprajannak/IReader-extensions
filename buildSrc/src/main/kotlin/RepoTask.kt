@@ -1,6 +1,3 @@
-import com.android.build.gradle.BaseExtension
-import com.android.build.gradle.internal.services.DslServices
-import com.android.sdklib.BuildToolInfo
 import com.googlecode.d2j.dex.Dex2jar
 import com.googlecode.d2j.reader.MultiDexFileReader
 import com.googlecode.dex2jar.tools.BaksmaliBaseDexExceptionHandler
@@ -40,8 +37,6 @@ open class RepoTask @Inject constructor(
     private val execOperations: ExecOperations,
 ) : DefaultTask() {
 
-    private val aapt2 by lazy { getAapt2Path() }
-
     private val prettyJson by lazy {
         Json {
             prettyPrint = true
@@ -75,7 +70,7 @@ open class RepoTask @Inject constructor(
         // Generate JS bundles for iOS
         val jsSources = generateJsBundles(jsDir)
 
-        val rawBadgings = parseBadgings(apkDir) ?: return
+        val rawBadgings = parseBadgings(apkDir, resolveAapt2Path()) ?: return
         val badgings = ensureValidState(rawBadgings)
         extractIcons(apkDir, iconDir, badgings)
 
@@ -161,16 +156,16 @@ open class RepoTask @Inject constructor(
         return jsSources
     }
 
-    private fun parseBadgings(apkDir: File): List<Badging>? {
+    private fun parseBadgings(apkDir: File, aapt2: String): List<Badging>? {
         print("Parsing Badging for ${apkDir.name}...\n")
         return apkDir.listFiles()
             ?.filter {
                 it.extension == "apk"
             }
-            ?.map { apk -> parseBadging(apk) }
+            ?.map { apk -> parseBadging(apk, aapt2) }
     }
 
-    private fun parseBadging(apkFile: File): Badging {
+    private fun parseBadging(apkFile: File, aapt2: String): Badging {
 
         val lines = ByteArrayOutputStream().use { outStream ->
             execOperations.exec {
@@ -452,17 +447,42 @@ open class RepoTask @Inject constructor(
     }
 
 
-    private fun getAapt2Path(): String {
-        val androidProject = project.subprojects.first { it.hasProperty("android") }
-        val androidExtension = androidProject.properties["android"] as BaseExtension
-        val dslServices = BaseExtension::class.java.getDeclaredField("dslServices").apply {
-            isAccessible = true
-        }.get(androidExtension) as DslServices
+    /**
+     * Resolves the aapt2 binary directly from the Android SDK's build-tools directory,
+     * picking the highest installed version. AGP 9 replaced the internal DSL/DslServices
+     * classes this used to reach into via reflection (BaseExtension is no longer the
+     * runtime type of the `android` extension), and that internal access also broke the
+     * configuration cache, which tried to serialize the cast failure as part of this
+     * task's lazily-computed field.
+     */
+    private fun resolveAapt2Path(): String {
+        val buildToolsDir = File(findAndroidSdkDir(), "build-tools")
+        val latestBuildTools = buildToolsDir.listFiles { file -> file.isDirectory }
+            ?.maxByOrNull { it.name }
+            ?: throw GradleException("No Android build-tools found in ${buildToolsDir.absolutePath}")
 
-        @Suppress("deprecation")
-        val buildToolInfo =
-            dslServices.versionedSdkLoaderService.versionedSdkLoader.get().buildToolInfoProvider.get()
-        return buildToolInfo.getPath(BuildToolInfo.PathId.AAPT2)
+        val aapt2Name = if (System.getProperty("os.name").lowercase().contains("win")) "aapt2.exe" else "aapt2"
+        val aapt2File = File(latestBuildTools, aapt2Name)
+        if (!aapt2File.exists()) {
+            throw GradleException("aapt2 not found at ${aapt2File.absolutePath}")
+        }
+        return aapt2File.absolutePath
+    }
+
+    private fun findAndroidSdkDir(): File {
+        val localPropertiesFile = File(project.rootDir, "local.properties")
+        if (localPropertiesFile.exists()) {
+            val properties = java.util.Properties().apply {
+                localPropertiesFile.inputStream().use { load(it) }
+            }
+            properties.getProperty("sdk.dir")?.let { return File(it) }
+        }
+        System.getenv("ANDROID_HOME")?.let { return File(it) }
+        System.getenv("ANDROID_SDK_ROOT")?.let { return File(it) }
+        throw GradleException(
+            "Could not determine the Android SDK location. Set sdk.dir in local.properties " +
+                "or the ANDROID_HOME/ANDROID_SDK_ROOT environment variable."
+        )
     }
 
     companion object {
