@@ -52,7 +52,11 @@ jobs:
             sleep 30
           done
 
-          echo "NUM_INDIVIDUAL_MODULES=$(cat projects.txt | grep '.*\:individual\:.*' | wc -l)" >> $GITHUB_ENV
+          # `gradlew projects` prints each project twice (once in the tree, once in the
+          # trailing flat list) with different line formatting, so extract the project
+          # path and dedupe on that before counting, or the chunk matrix ends up with
+          # more chunks than settings.gradle.kts's directory-based chunking produces.
+          echo "NUM_INDIVIDUAL_MODULES=$(cat projects.txt | grep -oE ':extensions:individual:[A-Za-z0-9_]+:[A-Za-z0-9_]+' | sort -u | wc -l)" >> $GITHUB_ENV
       - id: generate-matrices
         name: Create output matrices
         uses: actions/github-script@v6

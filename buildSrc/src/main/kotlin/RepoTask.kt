@@ -37,6 +37,10 @@ open class RepoTask @Inject constructor(
     private val execOperations: ExecOperations,
 ) : DefaultTask() {
 
+    // Captured at configuration time: `Task.project` is unsupported at execution time
+    // under the configuration cache.
+    private val rootDir: File = project.rootDir
+
     private val prettyJson by lazy {
         Json {
             prettyPrint = true
@@ -470,7 +474,7 @@ open class RepoTask @Inject constructor(
     }
 
     private fun findAndroidSdkDir(): File {
-        val localPropertiesFile = File(project.rootDir, "local.properties")
+        val localPropertiesFile = File(rootDir, "local.properties")
         if (localPropertiesFile.exists()) {
             val properties = java.util.Properties().apply {
                 localPropertiesFile.inputStream().use { load(it) }
